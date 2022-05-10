@@ -1,0 +1,73 @@
+---
+name: ci
+on: pull_request
+jobs:
+  yamllint:
+    name: yamllint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v1
+      - name: Install yamllint
+        run: pip install --user yamllint
+      - name: Run yamllint
+        run: ~/.local/bin/yamllint -c .yamllint.yml --strict .
+  shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: shellcheck
+        uses: fkautz/shell-linter@v1.0.1
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v1
+        with:
+          go-version: 1.17
+      - run: |
+          go build -race  ./...
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v1
+        with:
+          go-version: 1.17
+      - name: Install gotestsum
+        run: go get gotest.tools/gotestsum@v0.4.0
+      - name: Run tests
+        run: |
+          eval $(go env)
+          mkdir -p ~/junit/
+          ${GOPATH}/bin/gotestsum --junitfile ~/junit/unit-tests.xml -- -race -short $(go list ./...)
+ 
+  checkgomod:
+    name: check go.mod and go.sum
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v1
+        with:
+          go-version: 1.17
+      - run: go mod tidy
+      - name: Check for changes in go.mod or go.sum
+        run: |
+          git diff --name-only --exit-code go.mod || ( echo "Run go tidy" && false )
+          git diff --name-only --exit-code go.sum || ( echo "Run go tidy" && false )
+
+  excludereplace:
+    name: Exclude Replace in go.mod
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v2
+      - name: Exclude replace in go.mod
+        run: |
+          grep ^replace go.mod || exit 0
+          exit 1
