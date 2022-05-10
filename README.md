@@ -12,8 +12,10 @@
 ## Syntax
 
 ~~~ txt
-rewriteip {TO}
+rewriteip TO
 ~~~
+
+Where `TO` is valid IP address
 
 ## Examples
 
